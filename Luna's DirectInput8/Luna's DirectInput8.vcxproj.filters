@@ -13,14 +13,14 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\wine">
+      <UniqueIdentifier>{cbe0893a-dfb3-4e48-b6f0-9ba6545a98ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\wine">
+      <UniqueIdentifier>{2412ffd0-614c-430c-8f08-43dccee9d28b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -36,6 +36,21 @@
     <ClInclude Include="gui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="wine\device_private.h">
+      <Filter>Header Files\wine</Filter>
+    </ClInclude>
+    <ClInclude Include="wine\dinput_private.h">
+      <Filter>Header Files\wine</Filter>
+    </ClInclude>
+    <ClInclude Include="wine\list.h">
+      <Filter>Header Files\wine</Filter>
+    </ClInclude>
+    <ClInclude Include="wine\debug.h">
+      <Filter>Header Files\wine</Filter>
+    </ClInclude>
+    <ClInclude Include="wine\compat.h">
+      <Filter>Header Files\wine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.c">
@@ -44,13 +59,31 @@
     <ClCompile Include="directinput.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pch.c">
+    <ClCompile Include="gui.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="wine\ansi.c">
+      <Filter>Source Files\wine</Filter>
+    </ClCompile>
+    <ClCompile Include="wine\data_formats.c">
+      <Filter>Source Files\wine</Filter>
+    </ClCompile>
+    <ClCompile Include="wine\device.c">
+      <Filter>Source Files\wine</Filter>
+    </ClCompile>
+    <ClCompile Include="wine\dinput.c">
+      <Filter>Source Files\wine</Filter>
+    </ClCompile>
+    <ClCompile Include="wine\dinput_main.c">
+      <Filter>Source Files\wine</Filter>
+    </ClCompile>
+    <ClCompile Include="wine\keyboard.c">
+      <Filter>Source Files\wine</Filter>
+    </ClCompile>
+    <ClCompile Include="wine\mouse.c">
+      <Filter>Source Files\wine</Filter>
     </ClCompile>
     <ClCompile Include="config.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gui.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,37 +1,19 @@
-// dllmain.c : Defines the entry point for the DLL application.
-#include "pch.h"
-
 #define PLUGIN_NAME "Luna's DirectInput8"
-#define PLUGIN_VERSION "1.0.4"
+#define PLUGIN_VERSION "2.0"
 #define PLUGIN_NAMEVER PLUGIN_NAME " v" PLUGIN_VERSION
-#define PLUGIN_REPO "https://github.com/LunaticShiN3/Luna-DirectInput8"
+#define PLUGIN_REPO "https://github.com/Luna-Project64/Luna-DirectInput8"
 
 #include "zilmar_controller_1.0.h"
 #include "directinput.h"
 #include "config.h"
 #include "gui.h"
 
-HMODULE hModuleVariable;
 HWND hMainWindowVariable;
 
-static DInput* gKeyboard = NULL;
+extern HINSTANCE DINPUT_instance;
+#define hModuleVariable DINPUT_instance
 
-BOOL APIENTRY DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
-{
-    hModuleVariable = hModule;
-    switch (ul_reason_for_call)
-    {
-    case DLL_PROCESS_ATTACH:
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        break;
-    }
-    return TRUE;
-}
+static DInput* gKeyboard = NULL;
 
 EXPORT void CALL CloseDLL(void) {
     if (gKeyboard)

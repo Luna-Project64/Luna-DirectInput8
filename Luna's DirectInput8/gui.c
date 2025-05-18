@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "gui.h"
 #include "resource.h"
 #include "config.h"
@@ -265,7 +264,7 @@ void getConfigKey(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable) {
                 break;
             }
         }
-        if (i < sizeof(deviceState)) {
+        if (i < sizeof(state.deviceState)) {
             break;
         }
         Sleep(50);

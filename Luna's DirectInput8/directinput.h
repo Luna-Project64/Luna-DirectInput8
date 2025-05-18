@@ -1,5 +1,4 @@
-#ifndef _DIRECTINPUT_H
-#define _DIRECTINPUT_H
+#pragma once
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -17,5 +16,3 @@ struct DInputState DInputGetKeys(DInput*, HINSTANCE hinst, HWND hwnd);
 wchar_t* DInputGetKeyName(DInput*, BYTE returnVariable);
 
 void DInputCloseDll(void);
-
-#endif

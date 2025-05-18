@@ -52,8 +52,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;LUNASDIRECTINPUT8_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -70,8 +71,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;LUNASDIRECTINPUT8_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -86,10 +88,13 @@
   <ItemGroup>
     <ClInclude Include="config.h" />
     <ClInclude Include="directinput.h" />
-    <ClInclude Include="framework.h" />
     <ClInclude Include="gui.h" />
-    <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="wine\compat.h" />
+    <ClInclude Include="wine\debug.h" />
+    <ClInclude Include="wine\device_private.h" />
+    <ClInclude Include="wine\dinput_private.h" />
+    <ClInclude Include="wine\list.h" />
     <ClInclude Include="zilmar_controller_1.0.h" />
   </ItemGroup>
   <ItemGroup>
@@ -97,10 +102,13 @@
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="directinput.c" />
     <ClCompile Include="gui.c" />
-    <ClCompile Include="pch.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="wine\ansi.c" />
+    <ClCompile Include="wine\data_formats.c" />
+    <ClCompile Include="wine\device.c" />
+    <ClCompile Include="wine\dinput.c" />
+    <ClCompile Include="wine\dinput_main.c" />
+    <ClCompile Include="wine\keyboard.c" />
+    <ClCompile Include="wine\mouse.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Luna%27s DirectInput8.rc" />

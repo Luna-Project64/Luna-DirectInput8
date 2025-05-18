@@ -1,3 +1,5 @@
+#pragma once
+
 #include "directinput.h"
 
 typedef struct Modifier {

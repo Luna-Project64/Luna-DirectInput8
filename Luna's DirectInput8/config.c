@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "config.h"
 #include <shlwapi.h>
 #include <ShlObj.h>
