@@ -11,11 +11,11 @@ static HINSTANCE sInstance;
 static HWND parentVariable;
 static DInput* sKeyboard = NULL;
 
-static void getEditBoxContent(HWND hWndDlg, int nIDDlgItem, byte* returnVariable);
+static void getEditBoxContent(HWND hWndDlg, int nIDDlgItem, BYTE* returnVariable);
 static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable);
-static void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable);
-static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, byte returnVariable);
-static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable);
+static void getConfigKey(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable);
+static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, BYTE returnVariable);
+static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable);
 static void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable);
 static void resetButtonLabels(HWND hwndDlg);
 static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY);
@@ -23,7 +23,7 @@ static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float mult
 static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     int i;
-    byte selectedKey = 0;
+    BYTE selectedKey = 0;
     int selectedIndex;
     float selectedX;
     float selectedY;
@@ -227,7 +227,7 @@ void OpenDialog(HINSTANCE hinst, HWND parent)
     DialogBox(hinst, MAKEINTRESOURCE(IDD_DIALOG1), parent, DlgProc);
 }
 
-static void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+static void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable) {
     char lpch[4];
     HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
     GetWindowTextA(hDlgItem, lpch, sizeof(lpch));
@@ -252,11 +252,11 @@ static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVa
     }
 }
 
-void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+void getConfigKey(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable) {
     int i, j;
     for (j = 0; j < 100; j++) {
         struct DInputState state = DInputGetKeys(sKeyboard, sInstance, hwndDlg);
-        byte* deviceState = state.deviceState;
+        BYTE* deviceState = state.deviceState;
         deviceState[0] = 0;
         for (i = 0; i < sizeof(state.deviceState); i++) {
             if (deviceState[i] >> 7) {
@@ -272,13 +272,14 @@ void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
     }
 }
 
-static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, byte returnVariable) {
+static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, BYTE returnVariable) {
     HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
-    DIPROPSTRING dips = DInputGetKeyName(sKeyboard, returnVariable);
-    SetWindowTextW(hDlgItem, dips.wsz);
+    wchar_t* name = DInputGetKeyName(sKeyboard, returnVariable);
+    SetWindowTextW(hDlgItem, name);
+    free(name);
 }
 
-static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable) {
     char lpch[4];
     HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
     Edit_LimitText(hDlgItem, 3);
@@ -302,9 +303,10 @@ static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float mult
     LvItem.iItem = Index;
     LvItem.iSubItem = 0;
     if (Key != 0) {
-        DIPROPSTRING dips = DInputGetKeyName(sKeyboard, Key);
-        LvItem.pszText = (char*) dips.wsz; //this bich refuses to be ascii so gotta use unicode functions
+        wchar_t* name = DInputGetKeyName(sKeyboard, Key);
+        LvItem.pszText = (char*)name; //this bich refuses to be ascii so gotta use unicode functions
         SendMessageW(hDlgItem, LVM_SETITEMW, 0, (LPARAM)&LvItem);
+        free(name);
     }
     else {
         LvItem.pszText = "Not set";

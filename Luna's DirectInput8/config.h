@@ -1,7 +1,7 @@
 #include "directinput.h"
 
 typedef struct Modifier {
-    byte keybind;
+    BYTE keybind;
     float multiplierX;
     float multiplierY;
 } Modifier;
@@ -9,30 +9,30 @@ typedef struct Modifier {
 typedef struct Config {
     int configVersion;
 
-    byte keybindDpadRight;
-    byte keybindDpadLeft;
-    byte keybindDpadDown;
-    byte keybindDpadUp;
-    byte keybindStart;
-    byte keybindZ;
-    byte keybindB;
-    byte keybindA;
-    byte keybindCRight;
-    byte keybindCLeft;
-    byte keybindCDown;
-    byte keybindCUp;
-    byte keybindR;
-    byte keybindL;
+    BYTE keybindDpadRight;
+    BYTE keybindDpadLeft;
+    BYTE keybindDpadDown;
+    BYTE keybindDpadUp;
+    BYTE keybindStart;
+    BYTE keybindZ;
+    BYTE keybindB;
+    BYTE keybindA;
+    BYTE keybindCRight;
+    BYTE keybindCLeft;
+    BYTE keybindCDown;
+    BYTE keybindCUp;
+    BYTE keybindR;
+    BYTE keybindL;
 
-    byte keybindRight;
-    byte keybindLeft;
-    byte keybindDown;
-    byte keybindUp;
+    BYTE keybindRight;
+    BYTE keybindLeft;
+    BYTE keybindDown;
+    BYTE keybindUp;
 
-    byte rangeCardinalX;
-    byte rangeCardinalY;
-    byte rangeDiagonalX;
-    byte rangeDiagonalY;
+    BYTE rangeCardinalX;
+    BYTE rangeCardinalY;
+    BYTE rangeDiagonalX;
+    BYTE rangeDiagonalY;
 
     Modifier modifiers[50];
 } Config;

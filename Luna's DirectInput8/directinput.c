@@ -3,6 +3,9 @@
 #include "config.h"
 #include <shlwapi.h>
 
+#define DIRECTINPUT_VERSION 0x0800
+#include <dinput.h>
+
 static IDirectInput8A* interfacePointer = NULL;
 
 void DInputCloseDll(void)
@@ -148,7 +151,7 @@ struct DInputState DInputGetKeys(DInput* i, HINSTANCE hinst, HWND hwnd) {
 	return state;
 }
 
-DIPROPSTRING DInputGetKeyName(DInput* i, byte returnVariable)
+wchar_t* DInputGetKeyName(DInput* i, BYTE returnVariable)
 {
 	LPDIRECTINPUTDEVICE8A lpdiKeyboard = (LPDIRECTINPUTDEVICE8A)i;
 	DIPROPSTRING dips;
@@ -156,7 +159,8 @@ DIPROPSTRING DInputGetKeyName(DInput* i, byte returnVariable)
 	dips.diph.dwHeaderSize = sizeof(dips.diph);
 	dips.diph.dwHow = DIPH_BYOFFSET;
 	dips.diph.dwObj = returnVariable;
+	dips.wsz[0] = L'\0';
 
 	IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips.diph); //this bich refuses to be ascii so gotta use unicode functions
-	return dips;
+	return _wcsdup(dips.wsz);
 }

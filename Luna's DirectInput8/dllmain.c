@@ -76,10 +76,10 @@ EXPORT void CALL GetKeys(int Control, BUTTONS* Keys) {
         return;
 
     struct DInputState state = DInputGetKeys(gKeyboard, hModuleVariable, hMainWindowVariable);
-    byte* deviceState = state.deviceState;
+    BYTE* deviceState = state.deviceState;
 
-    byte integerX;
-    byte integerY;
+    BYTE integerX;
+    BYTE integerY;
 
     float floatX;
     float floatY;
