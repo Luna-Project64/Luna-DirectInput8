@@ -68,13 +68,12 @@ static Config defaultConfig = {
     .rangeDiagonalY = 89,
 
     .modifiers = {
-        {0x2A, 0.2, 0.2},
-        {0x39, 1, 0.58},
-        {0x2F, 0.58, 1}
+        {0x2A, 0.2f , 0.2f},
+        {0x39, 1.0f , 0.58f},
+        {0x2F, 0.58f, 1.f}
     }
 };
 
-LPWSTR getConfigPath(void);
 void saveConfig(void);
 void loadConfig(void);
 void restoreDefaults(void);

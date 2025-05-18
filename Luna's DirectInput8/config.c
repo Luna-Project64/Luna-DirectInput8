@@ -4,14 +4,11 @@
 #include <ShlObj.h>
 #include <KnownFolders.h>
 
-FILE* cptr;
-errno_t cfgerr;
-WCHAR configPath[MAX_PATH] = L"";
-
 /**
  * Returns the path of the config file, creating the containing folders if they don't already exist.
  */
-LPWSTR getConfigPath(void) {
+static LPWSTR getConfigPath(void) {
+    static WCHAR configPath[MAX_PATH] = L"";
     if (configPath[0] == '\0') {
         PWSTR appDataFolder;
         WCHAR configDirectory[MAX_PATH] = L"";
@@ -25,7 +22,8 @@ LPWSTR getConfigPath(void) {
 }
 
 void saveConfig(void) {
-    cfgerr = _wfopen_s(&cptr, getConfigPath(), L"wb"); //Creates or opens config file
+    FILE* cptr;
+    errno_t cfgerr = _wfopen_s(&cptr, getConfigPath(), L"wb"); //Creates or opens config file
 
     if (cptr != 0) {
         fwrite(&config, sizeof(config), 1, cptr);
@@ -35,7 +33,8 @@ void saveConfig(void) {
 }
 
 void loadConfig(void) {
-    cfgerr = _wfopen_s(&cptr, getConfigPath(), L"rb"); //Opens config file to read
+    FILE* cptr;
+    errno_t cfgerr = _wfopen_s(&cptr, getConfigPath(), L"rb"); //Opens config file to read
 
     if (cfgerr) {
         restoreDefaults();

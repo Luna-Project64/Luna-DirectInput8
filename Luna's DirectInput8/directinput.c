@@ -4,17 +4,16 @@
 #include <shlwapi.h>
 
 IDirectInput8A* interfacePointer;
-FILE* fptr;
-errno_t err;
-char filePath[MAX_PATH];
 
 void DInputInit(HINSTANCE hinst, HWND hwnd) {
+	char filePath[MAX_PATH];
 	GetModuleFileNameA(NULL, filePath, sizeof(filePath));
 	PathRemoveFileSpecA(filePath);
 	PathCombineA(filePath, filePath, "Logs"); //Creates logs folder, required for PJ64 1.6
 	CreateDirectoryA(filePath, NULL);
 	PathCombineA(filePath, filePath, "Lunalog.txt"); //Creates or opens log file
-	err = fopen_s(&fptr, filePath, "w");
+	FILE* fptr;
+	errno_t err = fopen_s(&fptr, filePath, "w");
 
 	HRESULT result= DirectInput8Create( //Creates a DirectInput8 object.
 		hinst, //this has to be hModule
@@ -40,6 +39,9 @@ void DInputInit(HINSTANCE hinst, HWND hwnd) {
 			break;
 		case DIERR_OUTOFMEMORY:
 			fprintf(fptr, "DirectInput8Create DIERR_OUTOFMEMORY\n");
+			break;
+		default:
+			fprintf(fptr, "DirectInput8Create %d\n", result);
 			break;
 		}
 	}
@@ -90,7 +92,6 @@ void DInputInit(HINSTANCE hinst, HWND hwnd) {
 			fprintf(fptr, "Acquire DIERR_OTHERAPPHASPRIO\n");
 			break;
 		}
-		fflush(fptr);
 		fclose(fptr);
 	}
 }

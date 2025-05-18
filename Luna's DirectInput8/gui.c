@@ -7,19 +7,27 @@
 #include <stdlib.h>
 #include <shellapi.h>
 
-HWND hDlgItem;
-HWND parentVariable;
-int selectedIndex;
-int selectedKey;
-float selectedX;
-float selectedY;
+static HWND parentVariable;
 
-BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
+static void getEditBoxContent(HWND hWndDlg, int nIDDlgItem, byte* returnVariable);
+static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable);
+static void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable);
+static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, byte returnVariable);
+static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable);
+static void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable);
+static void resetButtonLabels(HWND hwndDlg);
+static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY);
+
+static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    FILE* fptr;
-    errno_t err;
-    char filePath[MAX_PATH];
     int i;
+    byte selectedKey = 0;
+    int selectedIndex;
+    float selectedX;
+    float selectedY;
+    LVCOLUMNA LvColumn;
+    LVITEMA LvItem;
+    HWND hDlgItem;
 
     switch (message)
     {
@@ -246,10 +254,10 @@ void OpenDialog(HINSTANCE hinst, HWND parent)
     DialogBox(hinst, MAKEINTRESOURCE(IDD_DIALOG1), parent, DlgProc);
 }
 
-void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+static void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
     char lpch[4];
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
-    GetWindowTextA(hDlgItem, &lpch, sizeof(lpch));
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    GetWindowTextA(hDlgItem, lpch, sizeof(lpch));
     *returnVariable = atoi(lpch);
     if (*returnVariable > 127) {
         *returnVariable = 127;
@@ -257,16 +265,16 @@ void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
     }
 }
 
-void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
+static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
     char lpch[32];
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
-    GetWindowTextA(hDlgItem, &lpch, sizeof(lpch));
-    *returnVariable = atof(lpch);
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    GetWindowTextA(hDlgItem, lpch, sizeof(lpch));
+    *returnVariable = (float) atof(lpch);
     if (*returnVariable < 0) {
-        *returnVariable = (0.0 - *returnVariable);
+        *returnVariable = (0.0f - *returnVariable);
     }
-    if (*returnVariable > 1.0) {
-        *returnVariable = 1.0;
+    if (*returnVariable > 1.0f) {
+        *returnVariable = 1.0f;
         setFloatEditBoxContent(hwndDlg, nIDDlgItem, returnVariable);
     }
 }
@@ -290,47 +298,50 @@ void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
     }
 }
 
-void setButtonLabel(HWND hwndDlg, int nIDDlgItem, byte returnVariable) {
+static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, byte returnVariable) {
+    DIPROPSTRING dips;
     dips.diph.dwSize = sizeof(dips);
-    dips.diph.dwHeaderSize = sizeof(diph);
+    dips.diph.dwHeaderSize = sizeof(dips.diph);
     dips.diph.dwHow = DIPH_BYOFFSET;
 
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
     dips.diph.dwObj = returnVariable;
-    IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips); //this bich refuses to be ascii so gotta use unicode functions
+    IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips.diph); //this bich refuses to be ascii so gotta use unicode functions
     SetWindowTextW(hDlgItem, dips.wsz);
 }
 
-void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
     char lpch[4];
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
     Edit_LimitText(hDlgItem, 3);
     _itoa_s(*returnVariable, lpch, sizeof(lpch), 10);
     SetWindowTextA(hDlgItem, lpch);
 }
 
-void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
+static void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
     char lpch[32];
     errno_t err;
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
     Edit_LimitText(hDlgItem, 8);
     err = _gcvt_s(lpch, sizeof(lpch), *returnVariable, 7);
     SetWindowTextA(hDlgItem, lpch);
 }
 
-void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY) {
+static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY) {
+    DIPROPSTRING dips;
     char lpch[sizeof(dips.wsz)];
-    hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
+    HWND hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
+    LVITEMA LvItem;
 
     LvItem.iItem = Index;
     LvItem.iSubItem = 0;
     if (Key != 0) {
         dips.diph.dwSize = sizeof(dips);
-        dips.diph.dwHeaderSize = sizeof(diph);
+        dips.diph.dwHeaderSize = sizeof(dips.diph);
         dips.diph.dwHow = DIPH_BYOFFSET;
         dips.diph.dwObj = Key;
-        IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips);
-        LvItem.pszText = dips.wsz; //this bich refuses to be ascii so gotta use unicode functions
+        IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips.diph);
+        LvItem.pszText = (char*) dips.wsz; //this bich refuses to be ascii so gotta use unicode functions
         SendMessageW(hDlgItem, LVM_SETITEMW, 0, (LPARAM)&LvItem);
     }
     else {
@@ -349,7 +360,7 @@ void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY) {
     SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
 }
 
-void resetButtonLabels(HWND hwndDlg) {
+static void resetButtonLabels(HWND hwndDlg) {
     setEditBoxContent(hwndDlg, IDC_CARDINALX, &config.rangeCardinalX);
     setEditBoxContent(hwndDlg, IDC_CARDINALY, &config.rangeCardinalY);
     setEditBoxContent(hwndDlg, IDC_DIAGONALX, &config.rangeDiagonalX);
