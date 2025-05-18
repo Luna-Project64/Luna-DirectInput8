@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "gui.h"
 #include "resource.h"
 #include "config.h"
@@ -7,33 +6,34 @@
 #include <stdlib.h>
 #include <shellapi.h>
 
-HWND hDlgItem;
-HWND parentVariable;
-int selectedIndex;
-int selectedKey;
-float selectedX;
-float selectedY;
+static HINSTANCE sInstance;
+static HWND parentVariable;
+static DInput* sKeyboard = NULL;
 
-BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
+static void getEditBoxContent(HWND hWndDlg, int nIDDlgItem, BYTE* returnVariable);
+static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable);
+static void getConfigKey(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable);
+static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, BYTE returnVariable);
+static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable);
+static void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable);
+static void resetButtonLabels(HWND hwndDlg);
+static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY);
+
+static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    FILE* fptr;
-    errno_t err;
-    char filePath[MAX_PATH];
     int i;
+    BYTE selectedKey = 0;
+    int selectedIndex;
+    float selectedX;
+    float selectedY;
+    LVCOLUMNA LvColumn;
+    LVITEMA LvItem;
+    HWND hDlgItem;
 
     switch (message)
     {
     case WM_INITDIALOG:
-        IDirectInputDevice8_Unacquire(lpdiKeyboard);
-        HRESULT result = IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, hwndDlg, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
-        for (i = 0; i < 100; i++) {
-            HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-            if (result != DIERR_OTHERAPPHASPRIO) {
-                break;
-            }
-            Sleep(50);
-        }
-
+        sKeyboard = DInputInit(sInstance, hwndDlg);
         hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
         memset(&LvColumn, 0, sizeof(LvColumn));
         LvColumn.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
@@ -61,15 +61,8 @@ BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CLOSE:
         loadConfig();
         EndDialog(hwndDlg, 0);
-        IDirectInputDevice8_Unacquire(lpdiKeyboard);
-        IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, parentVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-        for (i = 0; i < 100; i++) {
-            HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-            if (result != DIERR_OTHERAPPHASPRIO) {
-                break;
-            }
-            Sleep(50);
-        }
+        DInputDeinit(sKeyboard);
+        sKeyboard = NULL;
         break;
 
     case WM_NOTIFY:
@@ -118,28 +111,14 @@ BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
         case IDCANCEL:
             loadConfig();
             EndDialog(hwndDlg, 0);
-            IDirectInputDevice8_Unacquire(lpdiKeyboard);
-            IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, parentVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-            for (i = 0; i < 100; i++) {
-                HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-                if (result != DIERR_OTHERAPPHASPRIO) {
-                    break;
-                }
-                Sleep(50);
-            }
+            DInputDeinit(sKeyboard);
+            sKeyboard = NULL;
             break;
         case IDOK:
             saveConfig();
             EndDialog(hwndDlg, 0);
-            IDirectInputDevice8_Unacquire(lpdiKeyboard);
-            HRESULT result = IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, parentVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-            for (i = 0; i < 100; i++) {
-                HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-                if (result != DIERR_OTHERAPPHASPRIO) {
-                    break;
-                }
-                Sleep(50);
-            }
+            DInputDeinit(sKeyboard);
+            sKeyboard = NULL;
             break;
         case IDC_RESTOREDEFAULTS:
             restoreDefaults();
@@ -242,14 +221,15 @@ BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 void OpenDialog(HINSTANCE hinst, HWND parent)
 {
+    sInstance = hinst;
     parentVariable = parent;
     DialogBox(hinst, MAKEINTRESOURCE(IDD_DIALOG1), parent, DlgProc);
 }
 
-void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+static void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable) {
     char lpch[4];
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
-    GetWindowTextA(hDlgItem, &lpch, sizeof(lpch));
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    GetWindowTextA(hDlgItem, lpch, sizeof(lpch));
     *returnVariable = atoi(lpch);
     if (*returnVariable > 127) {
         *returnVariable = 127;
@@ -257,99 +237,96 @@ void getEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
     }
 }
 
-void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
+static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
     char lpch[32];
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
-    GetWindowTextA(hDlgItem, &lpch, sizeof(lpch));
-    *returnVariable = atof(lpch);
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    GetWindowTextA(hDlgItem, lpch, sizeof(lpch));
+    *returnVariable = (float) atof(lpch);
     if (*returnVariable < 0) {
-        *returnVariable = (0.0 - *returnVariable);
+        *returnVariable = (0.0f - *returnVariable);
     }
-    if (*returnVariable > 1.0) {
-        *returnVariable = 1.0;
+    if (*returnVariable > 1.0f) {
+        *returnVariable = 1.0f;
         setFloatEditBoxContent(hwndDlg, nIDDlgItem, returnVariable);
     }
 }
 
-void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+void getConfigKey(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable) {
     int i, j;
     for (j = 0; j < 100; j++) {
-        IDirectInputDevice8_GetDeviceState(lpdiKeyboard, (sizeof(deviceState)), (LPVOID*)&deviceState);
+        struct DInputState state = DInputGetKeys(sKeyboard, sInstance, hwndDlg);
+        BYTE* deviceState = state.deviceState;
         deviceState[0] = 0;
-        for (i = 0; i < sizeof(deviceState); i++) {
+        for (i = 0; i < sizeof(state.deviceState); i++) {
             if (deviceState[i] >> 7) {
                 *returnVariable = i;
                 setButtonLabel(hwndDlg, nIDDlgItem, *returnVariable);
                 break;
             }
         }
-        if (i < sizeof(deviceState)) {
+        if (i < sizeof(state.deviceState)) {
             break;
         }
         Sleep(50);
     }
 }
 
-void setButtonLabel(HWND hwndDlg, int nIDDlgItem, byte returnVariable) {
-    dips.diph.dwSize = sizeof(dips);
-    dips.diph.dwHeaderSize = sizeof(diph);
-    dips.diph.dwHow = DIPH_BYOFFSET;
-
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
-    dips.diph.dwObj = returnVariable;
-    IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips); //this bich refuses to be ascii so gotta use unicode functions
-    SetWindowTextW(hDlgItem, dips.wsz);
+static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, BYTE returnVariable) {
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    wchar_t* name = DInputGetKeyName(sKeyboard, returnVariable);
+    SetWindowTextW(hDlgItem, name);
+    free(name);
 }
 
-void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
+static void setEditBoxContent(HWND hwndDlg, int nIDDlgItem, BYTE* returnVariable) {
     char lpch[4];
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
     Edit_LimitText(hDlgItem, 3);
     _itoa_s(*returnVariable, lpch, sizeof(lpch), 10);
     SetWindowTextA(hDlgItem, lpch);
 }
 
-void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
+static void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable) {
     char lpch[32];
     errno_t err;
-    hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
+    HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
     Edit_LimitText(hDlgItem, 8);
     err = _gcvt_s(lpch, sizeof(lpch), *returnVariable, 7);
     SetWindowTextA(hDlgItem, lpch);
 }
 
-void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY) {
-    char lpch[sizeof(dips.wsz)];
-    hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
+static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY) {
+    HWND hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
+    LVITEMA LvItem;
 
     LvItem.iItem = Index;
     LvItem.iSubItem = 0;
     if (Key != 0) {
-        dips.diph.dwSize = sizeof(dips);
-        dips.diph.dwHeaderSize = sizeof(diph);
-        dips.diph.dwHow = DIPH_BYOFFSET;
-        dips.diph.dwObj = Key;
-        IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips);
-        LvItem.pszText = dips.wsz; //this bich refuses to be ascii so gotta use unicode functions
+        wchar_t* name = DInputGetKeyName(sKeyboard, Key);
+        LvItem.pszText = (char*)name; //this bich refuses to be ascii so gotta use unicode functions
         SendMessageW(hDlgItem, LVM_SETITEMW, 0, (LPARAM)&LvItem);
+        free(name);
     }
     else {
         LvItem.pszText = "Not set";
         SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
     }
 
-    LvItem.iSubItem = 1;
-    _gcvt_s(lpch, sizeof(lpch), multX, 5);
-    LvItem.pszText = lpch;
-    SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
+    {
+        char lpch[100];
+        LvItem.iSubItem = 1;
+        _gcvt_s(lpch, sizeof(lpch), multX, 5);
+        LvItem.pszText = lpch;
+        SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
 
-    LvItem.iSubItem = 2;
-    _gcvt_s(lpch, sizeof(lpch), multY, 5);
-    LvItem.pszText = lpch;
-    SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
+        LvItem.iSubItem = 2;
+        _gcvt_s(lpch, sizeof(lpch), multY, 5);
+        LvItem.pszText = lpch;
+        SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
+    }
 }
 
-void resetButtonLabels(HWND hwndDlg) {
+static void resetButtonLabels(HWND hwndDlg) {
     setEditBoxContent(hwndDlg, IDC_CARDINALX, &config.rangeCardinalX);
     setEditBoxContent(hwndDlg, IDC_CARDINALY, &config.rangeCardinalY);
     setEditBoxContent(hwndDlg, IDC_DIAGONALX, &config.rangeDiagonalX);

@@ -1,40 +1,27 @@
-// dllmain.c : Defines the entry point for the DLL application.
-#include "pch.h"
-
 #define PLUGIN_NAME "Luna's DirectInput8"
-#define PLUGIN_VERSION "1.0.4"
+#define PLUGIN_VERSION "2.0"
 #define PLUGIN_NAMEVER PLUGIN_NAME " v" PLUGIN_VERSION
-#define PLUGIN_REPO "https://github.com/LunaticShiN3/Luna-DirectInput8"
+#define PLUGIN_REPO "https://github.com/Luna-Project64/Luna-DirectInput8"
 
 #include "zilmar_controller_1.0.h"
 #include "directinput.h"
 #include "config.h"
 #include "gui.h"
 
-HMODULE hModuleVariable;
 HWND hMainWindowVariable;
 
-BOOL APIENTRY DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
-{
-    hModuleVariable = hModule;
-    switch (ul_reason_for_call)
-    {
-    case DLL_PROCESS_ATTACH:
-        loadConfig();
-        break;
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        break;
-    }
-    return TRUE;
-}
+extern HINSTANCE DINPUT_instance;
+#define hModuleVariable DINPUT_instance
+
+static DInput* gKeyboard = NULL;
 
 EXPORT void CALL CloseDLL(void) {
-    IDirectInputDevice8_Unacquire(lpdiKeyboard);
+    if (gKeyboard)
+    {
+        DInputDeinit(gKeyboard);
+    }
+
+    DInputCloseDll();
 }
 
 EXPORT void CALL DllAbout(HWND hParent) {
@@ -51,6 +38,7 @@ EXPORT void CALL DllAbout(HWND hParent) {
 }
 
 EXPORT void CALL DllConfig(HWND hParent) {
+    loadConfig();
     OpenDialog(hModuleVariable, hParent);
 }
 
@@ -66,13 +54,18 @@ EXPORT void CALL GetDllInfo(PLUGIN_INFO* PluginInfo) {
 }
 
 EXPORT void CALL GetKeys(int Control, BUTTONS* Keys) {
-    byte integerX;
-    byte integerY;
+    if (!gKeyboard)
+        return;
+
+    struct DInputState state = DInputGetKeys(gKeyboard, hModuleVariable, hMainWindowVariable);
+    BYTE* deviceState = state.deviceState;
+
+    BYTE integerX;
+    BYTE integerY;
 
     float floatX;
     float floatY;
 
-    DInputGetKeys(hModuleVariable, hMainWindowVariable);
     Keys->R_DPAD = (deviceState[config.keybindDpadRight] >> 7);
     Keys->L_DPAD = (deviceState[config.keybindDpadLeft] >> 7);
     Keys->D_DPAD = (deviceState[config.keybindDpadDown] >> 7);
@@ -134,25 +127,20 @@ EXPORT void CALL InitiateControllers(HWND hMainWindow, CONTROL Controls[4])
     Controls[0].Present = TRUE;
 
     hMainWindowVariable = hMainWindow;
-
-    DInputInit(hModuleVariable, hMainWindowVariable);
 }
 
-EXPORT void CALL RomClosed(void) {
-    //required for PJ64 2.x and newer
+EXPORT void CALL RomClosed(void)
+{
+    if (!gKeyboard)
+        return;
+
+    DInputDeinit(gKeyboard);
+    gKeyboard = NULL;
 }
 
 EXPORT void CALL RomOpen(void) {
-    IDirectInputDevice8_Unacquire(lpdiKeyboard);
-    IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, hMainWindowVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-    int i;
-    for (i = 0; i < 100; i++) {
-        HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-        if (result != DIERR_OTHERAPPHASPRIO) {
-            break;
-        }
-        Sleep(50);
-    }
+    loadConfig();
+    gKeyboard = DInputInit(hModuleVariable, hMainWindowVariable);
 }
 
 /*EXPORT void CALL WM_KeyDown(WPARAM wParam, LPARAM lParam) {

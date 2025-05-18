@@ -1,16 +1,18 @@
-#ifndef _DIRECTINPUT_H
-#define _DIRECTINPUT_H
-
-#define DIRECTINPUT_VERSION 0x0800
+#pragma once
 
 #include <stdbool.h>
 #include <stdio.h>
-#include <dinput.h>
+#include <windows.h>
 
-void DInputInit(HINSTANCE hinst, HWND hwnd);
-void DInputGetKeys(HINSTANCE hinst, HWND hwnd);
+typedef struct _DInput* DInput;
+struct DInputState
+{
+	BYTE deviceState[256];
+};
 
-byte deviceState[256];
-LPDIRECTINPUTDEVICE8A lpdiKeyboard;
+DInput* DInputInit(HINSTANCE hinst, HWND hwnd);
+void DInputDeinit(DInput*);
+struct DInputState DInputGetKeys(DInput*, HINSTANCE hinst, HWND hwnd);
+wchar_t* DInputGetKeyName(DInput*, BYTE returnVariable);
 
-#endif
+void DInputCloseDll(void);
