@@ -14,6 +14,8 @@ void DInputInit(HINSTANCE hinst, HWND hwnd) {
 	PathCombineA(filePath, filePath, "Lunalog.txt"); //Creates or opens log file
 	FILE* fptr;
 	errno_t err = fopen_s(&fptr, filePath, "w");
+	if (err)
+		fptr = NULL;
 
 	HRESULT result= DirectInput8Create( //Creates a DirectInput8 object.
 		hinst, //this has to be hModule

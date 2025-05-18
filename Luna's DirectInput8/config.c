@@ -24,6 +24,8 @@ static LPWSTR getConfigPath(void) {
 void saveConfig(void) {
     FILE* cptr;
     errno_t cfgerr = _wfopen_s(&cptr, getConfigPath(), L"wb"); //Creates or opens config file
+    if (cfgerr)
+        cptr = NULL;
 
     if (cptr != 0) {
         fwrite(&config, sizeof(config), 1, cptr);
