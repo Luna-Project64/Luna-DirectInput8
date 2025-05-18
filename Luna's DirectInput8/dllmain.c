@@ -23,8 +23,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-        loadConfig();
-        break;
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
@@ -51,6 +49,7 @@ EXPORT void CALL DllAbout(HWND hParent) {
 }
 
 EXPORT void CALL DllConfig(HWND hParent) {
+    loadConfig();
     OpenDialog(hModuleVariable, hParent);
 }
 
@@ -143,6 +142,7 @@ EXPORT void CALL RomClosed(void) {
 }
 
 EXPORT void CALL RomOpen(void) {
+    loadConfig();
     IDirectInputDevice8_Unacquire(lpdiKeyboard);
     IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, hMainWindowVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
     int i;
