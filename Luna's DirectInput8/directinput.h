@@ -7,10 +7,17 @@
 #include <stdio.h>
 #include <dinput.h>
 
-void DInputInit(HINSTANCE hinst, HWND hwnd);
-void DInputGetKeys(HINSTANCE hinst, HWND hwnd);
+typedef struct _DInput* DInput;
+struct DInputState
+{
+	byte deviceState[256];
+};
 
-byte deviceState[256];
-LPDIRECTINPUTDEVICE8A lpdiKeyboard;
+DInput* DInputInit(HINSTANCE hinst, HWND hwnd);
+void DInputDeinit(DInput*);
+struct DInputState DInputGetKeys(DInput*, HINSTANCE hinst, HWND hwnd);
+DIPROPSTRING DInputGetKeyName(DInput*, byte returnVariable);
+
+void DInputCloseDll(void);
 
 #endif

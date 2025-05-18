@@ -3,9 +3,29 @@
 #include "config.h"
 #include <shlwapi.h>
 
-IDirectInput8A* interfacePointer;
+static IDirectInput8A* interfacePointer = NULL;
 
-void DInputInit(HINSTANCE hinst, HWND hwnd) {
+void DInputCloseDll(void)
+{
+	if (interfacePointer)
+		IDirectInputDevice8_Release(interfacePointer);
+}
+
+static HRESULT DInputOpenDLL(HINSTANCE hinst)
+{
+	if (interfacePointer)
+		return 0;
+
+	return DirectInput8Create( //Creates a DirectInput8 object.
+		hinst, //this has to be hModule
+		DIRECTINPUT_VERSION,
+		&IID_IDirectInput8A,
+		(LPVOID*)&interfacePointer,
+		NULL
+	);
+}
+
+DInput* DInputInit(HINSTANCE hinst, HWND hwnd) {
 	char filePath[MAX_PATH];
 	GetModuleFileNameA(NULL, filePath, sizeof(filePath));
 	PathRemoveFileSpecA(filePath);
@@ -17,14 +37,7 @@ void DInputInit(HINSTANCE hinst, HWND hwnd) {
 	if (err)
 		fptr = NULL;
 
-	HRESULT result= DirectInput8Create( //Creates a DirectInput8 object.
-		hinst, //this has to be hModule
-		DIRECTINPUT_VERSION,
-		&IID_IDirectInput8A,
-		(LPVOID*)&interfacePointer,
-		NULL
-	);
-
+	HRESULT result = DInputOpenDLL(hinst);
 	if (fptr != 0) {
 		switch (result) {
 		case DI_OK:
@@ -48,6 +61,7 @@ void DInputInit(HINSTANCE hinst, HWND hwnd) {
 		}
 	}
 
+	LPDIRECTINPUTDEVICE8A lpdiKeyboard;
 	IDirectInput8_CreateDevice( //Creates a keyboard DirectInput device.
 		interfacePointer,
 		&GUID_SysKeyboard,
@@ -77,7 +91,7 @@ void DInputInit(HINSTANCE hinst, HWND hwnd) {
 		}
 	}
 
-		result = IDirectInputDevice8_Acquire(lpdiKeyboard); //Acquires input device
+	result = IDirectInputDevice8_Acquire(lpdiKeyboard); //Acquires input device
 
 	if (fptr != 0) {
 		switch (result) {
@@ -96,13 +110,26 @@ void DInputInit(HINSTANCE hinst, HWND hwnd) {
 		}
 		fclose(fptr);
 	}
+
+	return lpdiKeyboard;
 }
 
-void DInputGetKeys(HINSTANCE hinst, HWND hwnd) {
+void DInputDeinit(DInput* i)
+{
+	if (!i)
+		return;
 
+	LPDIRECTINPUTDEVICE8A d = (LPDIRECTINPUTDEVICE8A)i;
+	IDirectInputDevice8_Unacquire(d);
+	IDirectInputDevice8_Release(d);
+}
+
+struct DInputState DInputGetKeys(DInput* i, HINSTANCE hinst, HWND hwnd) {
+	struct DInputState state = { 0 };
+	LPDIRECTINPUTDEVICE8A lpdiKeyboard = (LPDIRECTINPUTDEVICE8A)i;
 	if (lpdiKeyboard != NULL) {
-		HRESULT result = IDirectInputDevice8_GetDeviceState(lpdiKeyboard, (sizeof(deviceState)), (LPVOID*)&deviceState);
-		deviceState[0] = 0;
+		HRESULT result = IDirectInputDevice8_GetDeviceState(lpdiKeyboard, (sizeof(state.deviceState)), (LPVOID*)&state.deviceState);
+		state.deviceState[0] = 0;
 
 		if (GetForegroundWindow() == hwnd) {
 			if (result == DIERR_INPUTLOST) {
@@ -117,4 +144,19 @@ void DInputGetKeys(HINSTANCE hinst, HWND hwnd) {
 			}
 		}
 	}
+
+	return state;
+}
+
+DIPROPSTRING DInputGetKeyName(DInput* i, byte returnVariable)
+{
+	LPDIRECTINPUTDEVICE8A lpdiKeyboard = (LPDIRECTINPUTDEVICE8A)i;
+	DIPROPSTRING dips;
+	dips.diph.dwSize = sizeof(dips);
+	dips.diph.dwHeaderSize = sizeof(dips.diph);
+	dips.diph.dwHow = DIPH_BYOFFSET;
+	dips.diph.dwObj = returnVariable;
+
+	IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips.diph); //this bich refuses to be ascii so gotta use unicode functions
+	return dips;
 }

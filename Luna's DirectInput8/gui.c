@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <shellapi.h>
 
+static HINSTANCE sInstance;
 static HWND parentVariable;
+static DInput* sKeyboard = NULL;
 
 static void getEditBoxContent(HWND hWndDlg, int nIDDlgItem, byte* returnVariable);
 static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVariable);
@@ -32,16 +34,7 @@ static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM l
     switch (message)
     {
     case WM_INITDIALOG:
-        IDirectInputDevice8_Unacquire(lpdiKeyboard);
-        HRESULT result = IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, hwndDlg, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
-        for (i = 0; i < 100; i++) {
-            HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-            if (result != DIERR_OTHERAPPHASPRIO) {
-                break;
-            }
-            Sleep(50);
-        }
-
+        sKeyboard = DInputInit(sInstance, hwndDlg);
         hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
         memset(&LvColumn, 0, sizeof(LvColumn));
         LvColumn.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
@@ -69,15 +62,8 @@ static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM l
     case WM_CLOSE:
         loadConfig();
         EndDialog(hwndDlg, 0);
-        IDirectInputDevice8_Unacquire(lpdiKeyboard);
-        IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, parentVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-        for (i = 0; i < 100; i++) {
-            HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-            if (result != DIERR_OTHERAPPHASPRIO) {
-                break;
-            }
-            Sleep(50);
-        }
+        DInputDeinit(sKeyboard);
+        sKeyboard = NULL;
         break;
 
     case WM_NOTIFY:
@@ -126,28 +112,14 @@ static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM l
         case IDCANCEL:
             loadConfig();
             EndDialog(hwndDlg, 0);
-            IDirectInputDevice8_Unacquire(lpdiKeyboard);
-            IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, parentVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-            for (i = 0; i < 100; i++) {
-                HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-                if (result != DIERR_OTHERAPPHASPRIO) {
-                    break;
-                }
-                Sleep(50);
-            }
+            DInputDeinit(sKeyboard);
+            sKeyboard = NULL;
             break;
         case IDOK:
             saveConfig();
             EndDialog(hwndDlg, 0);
-            IDirectInputDevice8_Unacquire(lpdiKeyboard);
-            HRESULT result = IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, parentVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-            for (i = 0; i < 100; i++) {
-                HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-                if (result != DIERR_OTHERAPPHASPRIO) {
-                    break;
-                }
-                Sleep(50);
-            }
+            DInputDeinit(sKeyboard);
+            sKeyboard = NULL;
             break;
         case IDC_RESTOREDEFAULTS:
             restoreDefaults();
@@ -250,6 +222,7 @@ static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM l
 
 void OpenDialog(HINSTANCE hinst, HWND parent)
 {
+    sInstance = hinst;
     parentVariable = parent;
     DialogBox(hinst, MAKEINTRESOURCE(IDD_DIALOG1), parent, DlgProc);
 }
@@ -282,9 +255,10 @@ static void getFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVa
 void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
     int i, j;
     for (j = 0; j < 100; j++) {
-        IDirectInputDevice8_GetDeviceState(lpdiKeyboard, (sizeof(deviceState)), (LPVOID*)&deviceState);
+        struct DInputState state = DInputGetKeys(sKeyboard, sInstance, hwndDlg);
+        byte* deviceState = state.deviceState;
         deviceState[0] = 0;
-        for (i = 0; i < sizeof(deviceState); i++) {
+        for (i = 0; i < sizeof(state.deviceState); i++) {
             if (deviceState[i] >> 7) {
                 *returnVariable = i;
                 setButtonLabel(hwndDlg, nIDDlgItem, *returnVariable);
@@ -299,14 +273,8 @@ void getConfigKey(HWND hwndDlg, int nIDDlgItem, byte* returnVariable) {
 }
 
 static void setButtonLabel(HWND hwndDlg, int nIDDlgItem, byte returnVariable) {
-    DIPROPSTRING dips;
-    dips.diph.dwSize = sizeof(dips);
-    dips.diph.dwHeaderSize = sizeof(dips.diph);
-    dips.diph.dwHow = DIPH_BYOFFSET;
-
     HWND hDlgItem = GetDlgItem(hwndDlg, nIDDlgItem);
-    dips.diph.dwObj = returnVariable;
-    IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips.diph); //this bich refuses to be ascii so gotta use unicode functions
+    DIPROPSTRING dips = DInputGetKeyName(sKeyboard, returnVariable);
     SetWindowTextW(hDlgItem, dips.wsz);
 }
 
@@ -328,19 +296,13 @@ static void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVa
 }
 
 static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY) {
-    DIPROPSTRING dips;
-    char lpch[sizeof(dips.wsz)];
     HWND hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
     LVITEMA LvItem;
 
     LvItem.iItem = Index;
     LvItem.iSubItem = 0;
     if (Key != 0) {
-        dips.diph.dwSize = sizeof(dips);
-        dips.diph.dwHeaderSize = sizeof(dips.diph);
-        dips.diph.dwHow = DIPH_BYOFFSET;
-        dips.diph.dwObj = Key;
-        IDirectInputDevice8_GetProperty(lpdiKeyboard, DIPROP_KEYNAME, &dips.diph);
+        DIPROPSTRING dips = DInputGetKeyName(sKeyboard, Key);
         LvItem.pszText = (char*) dips.wsz; //this bich refuses to be ascii so gotta use unicode functions
         SendMessageW(hDlgItem, LVM_SETITEMW, 0, (LPARAM)&LvItem);
     }
@@ -349,15 +311,18 @@ static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float mult
         SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
     }
 
-    LvItem.iSubItem = 1;
-    _gcvt_s(lpch, sizeof(lpch), multX, 5);
-    LvItem.pszText = lpch;
-    SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
+    {
+        char lpch[100];
+        LvItem.iSubItem = 1;
+        _gcvt_s(lpch, sizeof(lpch), multX, 5);
+        LvItem.pszText = lpch;
+        SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
 
-    LvItem.iSubItem = 2;
-    _gcvt_s(lpch, sizeof(lpch), multY, 5);
-    LvItem.pszText = lpch;
-    SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
+        LvItem.iSubItem = 2;
+        _gcvt_s(lpch, sizeof(lpch), multY, 5);
+        LvItem.pszText = lpch;
+        SendMessageA(hDlgItem, LVM_SETITEMA, 0, (LPARAM)&LvItem);
+    }
 }
 
 static void resetButtonLabels(HWND hwndDlg) {

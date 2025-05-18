@@ -14,6 +14,8 @@
 HMODULE hModuleVariable;
 HWND hMainWindowVariable;
 
+static DInput* gKeyboard = NULL;
+
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -32,7 +34,12 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 }
 
 EXPORT void CALL CloseDLL(void) {
-    IDirectInputDevice8_Unacquire(lpdiKeyboard);
+    if (gKeyboard)
+    {
+        DInputDeinit(gKeyboard);
+    }
+
+    DInputCloseDll();
 }
 
 EXPORT void CALL DllAbout(HWND hParent) {
@@ -65,13 +72,18 @@ EXPORT void CALL GetDllInfo(PLUGIN_INFO* PluginInfo) {
 }
 
 EXPORT void CALL GetKeys(int Control, BUTTONS* Keys) {
+    if (!gKeyboard)
+        return;
+
+    struct DInputState state = DInputGetKeys(gKeyboard, hModuleVariable, hMainWindowVariable);
+    byte* deviceState = state.deviceState;
+
     byte integerX;
     byte integerY;
 
     float floatX;
     float floatY;
 
-    DInputGetKeys(hModuleVariable, hMainWindowVariable);
     Keys->R_DPAD = (deviceState[config.keybindDpadRight] >> 7);
     Keys->L_DPAD = (deviceState[config.keybindDpadLeft] >> 7);
     Keys->D_DPAD = (deviceState[config.keybindDpadDown] >> 7);
@@ -133,26 +145,20 @@ EXPORT void CALL InitiateControllers(HWND hMainWindow, CONTROL Controls[4])
     Controls[0].Present = TRUE;
 
     hMainWindowVariable = hMainWindow;
-
-    DInputInit(hModuleVariable, hMainWindowVariable);
 }
 
-EXPORT void CALL RomClosed(void) {
-    //required for PJ64 2.x and newer
+EXPORT void CALL RomClosed(void)
+{
+    if (!gKeyboard)
+        return;
+
+    DInputDeinit(gKeyboard);
+    gKeyboard = NULL;
 }
 
 EXPORT void CALL RomOpen(void) {
     loadConfig();
-    IDirectInputDevice8_Unacquire(lpdiKeyboard);
-    IDirectInputDevice8_SetCooperativeLevel(lpdiKeyboard, hMainWindowVariable, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
-    int i;
-    for (i = 0; i < 100; i++) {
-        HRESULT result = IDirectInputDevice8_Acquire(lpdiKeyboard);
-        if (result != DIERR_OTHERAPPHASPRIO) {
-            break;
-        }
-        Sleep(50);
-    }
+    gKeyboard = DInputInit(hModuleVariable, hMainWindowVariable);
 }
 
 /*EXPORT void CALL WM_KeyDown(WPARAM wParam, LPARAM lParam) {
