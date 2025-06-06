@@ -1,5 +1,5 @@
 #define PLUGIN_NAME "Luna's DirectInput8"
-#define PLUGIN_VERSION "2.0"
+#define PLUGIN_VERSION "2.1"
 #define PLUGIN_NAMEVER PLUGIN_NAME " v" PLUGIN_VERSION
 #define PLUGIN_REPO "https://github.com/Luna-Project64/Luna-DirectInput8"
 
