@@ -21,11 +21,12 @@ static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float mult
 
 static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    static BYTE selectedKey = 0;
+    static int selectedIndex = 0;
+    static float selectedX = 0;
+    static float selectedY = 0;
+
     int i;
-    BYTE selectedKey = 0;
-    int selectedIndex;
-    float selectedX;
-    float selectedY;
     LVCOLUMNA LvColumn;
     LVITEMA LvItem;
     HWND hDlgItem;
@@ -45,6 +46,7 @@ static BOOL CALLBACK DlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM l
         SendMessageA(hDlgItem, LVM_INSERTCOLUMNA, 1, (LPARAM)&LvColumn);
         LvColumn.pszText = "Y";
         SendMessageA(hDlgItem, LVM_INSERTCOLUMNA, 2, (LPARAM)&LvColumn);
+        LvItem = (LVITEMA){0};
         LvItem.mask = LVIF_TEXT;
         LvItem.cchTextMax = 256;
         LvItem.pszText = "Init";
@@ -298,6 +300,9 @@ static void setFloatEditBoxContent(HWND hwndDlg, int nIDDlgItem, float* returnVa
 static void setListRow(HWND hwndDlg, int Index, int Key, float multX, float multY) {
     HWND hDlgItem = GetDlgItem(hwndDlg, IDC_MODIFIERS);
     LVITEMA LvItem;
+    LvItem = (LVITEMA){ 0 };
+    LvItem.mask = LVIF_TEXT;
+    LvItem.cchTextMax = 256;
 
     LvItem.iItem = Index;
     LvItem.iSubItem = 0;
