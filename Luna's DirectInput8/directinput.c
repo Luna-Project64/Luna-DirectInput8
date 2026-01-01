@@ -23,7 +23,7 @@ static HRESULT DInputOpenDLL(HINSTANCE hinst)
 	if (interfacePointer)
 		return 0;
 
-	return WineDirectInput8Create( //Creates a DirectInput8 object.
+	return DirectInput8Create( //Creates a DirectInput8 object.
 		hinst, //this has to be hModule
 		DIRECTINPUT_VERSION,
 		&IID_IDirectInput8A,
