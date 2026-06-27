@@ -125,6 +125,7 @@ EXPORT void CALL InitiateControllers(HWND hMainWindow, CONTROL Controls[4])
     {
         Controls[i].Present = FALSE; //Enables controller 1 only. Might change later.
         Controls[i].RawData = FALSE;
+        Controls[i].Plugin = 2;
     }
     Controls[0].Present = TRUE;
 
