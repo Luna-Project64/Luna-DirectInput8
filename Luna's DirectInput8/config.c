@@ -3,26 +3,38 @@
 #include <ShlObj.h>
 #include <KnownFolders.h>
 
+extern char gPluginConfigDir[MAX_PATH];
+
 /**
  * Returns the path of the config file, creating the containing folders if they don't already exist.
  */
-static LPWSTR getConfigPath(void) {
-    static WCHAR configPath[MAX_PATH] = L"";
-    if (configPath[0] == '\0') {
-        PWSTR appDataFolder;
-        WCHAR configDirectory[MAX_PATH] = L"";
-        SHGetKnownFolderPath(&FOLDERID_RoamingAppData, 0, NULL, &appDataFolder);
-        PathCombineW(configDirectory, appDataFolder, L"Luna-Project64\\Config"); //Creates config folder, required for PJ64 1.6 (only when loading?)
-        CoTaskMemFree(appDataFolder);
-        CreateDirectoryW(configDirectory, NULL);
-        PathCombineW(configPath, configDirectory, L"Lunaconfig.bin");
+static const char* getConfigPath(void) {
+    static char configPath[MAX_PATH];
+    if (*gPluginConfigDir)
+    {
+        strcpy_s(configPath, MAX_PATH, gPluginConfigDir);
     }
-    return configPath;
+    else
+    {
+        SHGetFolderPath(NULL,
+            CSIDL_APPDATA,
+            NULL,
+            0,
+            configPath);
+    }
+
+    PathAppendA(configPath, "Luna-Project64"); //Creates config folder, required for PJ64 1.6 (only when loading?)
+    CreateDirectoryA(configPath, NULL);
+    PathAppendA(configPath, "Config"); //Creates config folder, required for PJ64 1.6 (only when loading?)
+    CreateDirectoryA(configPath, NULL);
+    PathAppendA(configPath, "Lunaconfig.bin");
+
+	return configPath;
 }
 
 void saveConfig(void) {
     FILE* cptr;
-    errno_t cfgerr = _wfopen_s(&cptr, getConfigPath(), L"wb"); //Creates or opens config file
+    errno_t cfgerr = fopen_s(&cptr, getConfigPath(), "wb"); //Creates or opens config file
     if (cfgerr)
         cptr = NULL;
 
@@ -35,7 +47,7 @@ void saveConfig(void) {
 
 void loadConfig(void) {
     FILE* cptr;
-    errno_t cfgerr = _wfopen_s(&cptr, getConfigPath(), L"rb"); //Opens config file to read
+    errno_t cfgerr = fopen_s(&cptr, getConfigPath(), "rb"); //Opens config file to read
 
     if (cfgerr) {
         restoreDefaults();
